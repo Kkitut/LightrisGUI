@@ -748,7 +748,7 @@ int main(int argc, char* argv[]) {
     int menusel = 0;
     _Bool issetting = 0;
     int scn = 0;
-    _Bool draw = 1;
+    register _Bool draw = 1;
 
     x = 4;
     y = 20;
@@ -968,6 +968,7 @@ int main(int argc, char* argv[]) {
                 bag[1] = generateRandomBag();
                 hand = GET_BAG_ROTATED(bag, 0, bagrotate);
                 hold = -1;
+                isHolding = 0;
                 x = 4;
                 y = 20;
                 currot = 0;
