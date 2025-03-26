@@ -267,14 +267,14 @@ static const unsigned int wallkickJLSTZ180[9] = {
     0b000011110011011100001010
 };
 
-int extractWallkick(const int* table, int kickIndex) {
+static int extractWallkick(const int* table, int kickIndex) {
     return (((table[kickIndex / 10] >> ((kickIndex * 3) % 30)) & 0x7) - 3);
 }
-int getFieldBits(int x, int y) {
+static int getFieldBits(int x, int y) {
     return (y < 0 || y >= FIELD_SIZE_Y || x < 0 || x >= FIELD_SIZE_X || field[y][x]) ? 1 : 0;
 }
 
-int getFieldBits2(int x, int y) {
+static int getFieldBits2(int x, int y) {
     return 
         (getFieldBits(x, y)         << 0) |
         (getFieldBits(x + 1, y)     << 1) |
@@ -282,7 +282,7 @@ int getFieldBits2(int x, int y) {
         (getFieldBits(x + 1, y + 1) << 3);
 }
 
-int getFieldBits3(int x, int y) {
+static int getFieldBits3(int x, int y) {
     return 
         (getFieldBits(x - 1, y + 1) << 0) |
         (getFieldBits(x, y + 1)     << 1) |
@@ -295,7 +295,7 @@ int getFieldBits3(int x, int y) {
         (getFieldBits(x + 1, y - 1) << 8);
 }
 
-int getFieldBits4(int x, int y) {
+static int getFieldBits4(int x, int y) {
     return 
         (getFieldBits(x - 1, y + 1) << 0)  |
         (getFieldBits(x, y + 1)     << 1)  |
@@ -316,9 +316,9 @@ int getFieldBits4(int x, int y) {
 }
 
 
-void wallKickTest(int mino, int rot) {
+static _Bool wallKickTest(int mino, int rot) {
     if (mino > 5) {
-        return;
+        return 0;
     }
     const unsigned int* table;
     int nextrot = (currot + (rot == 0 ? 3 : rot)) % 4;
@@ -333,7 +333,7 @@ void wallKickTest(int mino, int rot) {
                         currot = nextrot;
                         x = ty;
                         y = tx;
-                        break;
+                        return 1;
                     }
                 }
             } else {
@@ -348,11 +348,12 @@ void wallKickTest(int mino, int rot) {
                         currot = nextrot;
                         x = ty;
                         y = tx;
-                        break;
+                        return 1;
                     }
                 }
             } else {
                 currot = nextrot;
+                return 1;
             }
         }
     } else {
@@ -365,11 +366,12 @@ void wallKickTest(int mino, int rot) {
                         currot = nextrot;
                         x = ty;
                         y = tx;
-                        break;
+                        return 1;
                     }
                 }
             } else {
                 currot = nextrot;
+                return 1;
             }
         } else {
             if (getFieldBits4(x, y) & TETROMINOS[mino][nextrot]) {
@@ -384,14 +386,16 @@ void wallKickTest(int mino, int rot) {
                         }
                         x = ty;
                         y = tx;
-                        break;
+                        return 1;
                     }
                 }
             } else {
                 currot = nextrot;
+                return 1;
             }
         }
     }
+    return 0;
 }
 
 #define BAG_SIZE 7
@@ -545,7 +549,7 @@ static void gravityReset() {
     ForcedropTimer = clock() + Forcedrop;
 }
 
-static void gravity(int clock) {
+static _Bool gravity(int clock) {
     if (ForcedropTimer < clock) {
         if (isCanMoveAt(0)) {
             gravityReset();
@@ -553,7 +557,9 @@ static void gravity(int clock) {
         } else {
             drop();
         }
+        return 1;
     }
+    return 0;
 }
 
 SDL_Color ColorByMino(int colorIndex) {
@@ -742,6 +748,7 @@ int main(int argc, char* argv[]) {
     int menusel = 0;
     _Bool issetting = 0;
     int scn = 0;
+    _Bool draw = 1;
 
     x = 4;
     y = 20;
@@ -754,71 +761,83 @@ int main(int argc, char* argv[]) {
     hand = GET_BAG_ROTATED(bag, 0, bagrotate);
 
     SDL_Event e;
-    while (running) {
-        while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) {
-                running = 0;
-            }
-        }
-        clock_t ct = clock();
 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
+        clock_t ct = clock();
 
         //EnterCriticalSection(&inputcs);
         //focus = isWindowFocused();
         //LeaveCriticalSection(&inputcs);
 
         if (getKey('I')) {
+            draw = 1;
             cam.y--;
         }
         if (getKey('K')) {
+            draw = 1;
             cam.y++;
         }
         if (getKey('J')) {
+            draw = 1;
             cam.x--;
         }
         if (getKey('L')) {
+            draw = 1;
             cam.x++;
         }
+        Scn0:
+        for (;;) {
+            while (SDL_PollEvent(&e)) {
+                if (e.type == SDL_QUIT) {
+                    running = 0;
+                    goto ScnEnd;
+                }
+            }
+            ct = clock();
+            if (issetting) {
 
-        switch (scn) {
-            case 0: {
-                if (issetting) {
-
-                } else {
-                    if (getKeyDown(VK_UP)) {
-                        menusel--;
-                        if (menusel < 1) {
-                            menusel = 3;
-                        }
-                        nab = 0;
+            } else {
+                if (getKeyDown(VK_UP)) {
+                    draw = 1;
+                    menusel--;
+                    if (menusel < 1) {
+                        menusel = 3;
                     }
+                    nab = 0;
+                }
 
-                    if (getKeyDown(VK_DOWN)) {
-                        menusel++;
-                        if (menusel > 3) {
-                            menusel = 1;
-                        }
-                        nab = 0;
+                if (getKeyDown(VK_DOWN)) {
+                    draw = 1;
+                    menusel++;
+                    if (menusel > 3) {
+                        menusel = 1;
                     }
+                    nab = 0;
+                }
 
-                    if (getKeyDown(VK_SPACE) || getKeyDown(VK_RETURN)) {
-                        switch (menusel) {
-                            case 1:
-                                scn = 1;
-                                break;
-                            case 2:
-                                nab = 1;
-                                break;
-                            case 3:
-                                running = 0;
-                                break;
-                            default:
-                                nab = 0;
-                                break;
-                        }
+                if (getKeyDown(VK_SPACE) || getKeyDown(VK_RETURN)) {
+                    draw = 1;
+                    switch (menusel) {
+                        case 1:
+                            gravityReset();
+                            goto Scn1;
+                            break;
+                        case 2:
+                            nab = 1;
+                            break;
+                        case 3:
+                            running = 0;
+                            break;
+                        default:
+                            nab = 0;
+                            break;
                     }
+                }
+
+                if (draw) {
+                    draw = 0;
+
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                    SDL_RenderClear(renderer);
 
                     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
                     SDL_Rect rect = {68, 32, 120, 80};
@@ -841,114 +860,151 @@ int main(int argc, char* argv[]) {
                         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
                         renderFont(renderer, font11, "Exit", 116, 82, &cWhite);
                     }
-                }
 
-                if (nab) {
-                    renderFont(renderer, font7, "Not available", 0, -1, &cRed);
+                    if (nab) {
+                        renderFont(renderer, font7, "Not available", 0, -1, &cRed);
+                    }
+
+                    renderFont(renderer, font7, "0.0.0 DEMO", 0, 135, &cWhite);
+                    SDL_RenderPresent(renderer);
                 }
-                break;
+                SDL_Delay(1);
             }
-            case 1: {
-                gravity(ct);
-                if (getKey(VK_DOWN)) {
-                    if (isCanMoveAt(0) && handlingclock[2] < ct) {
-                        gravityReset();
-                        handlingclock[2] = handling[2] + ct;
-                        if (handling[2] <= 0) {
-                            while (isCanMoveAt(0)) {
-                                y--;
-                            }
-                        } else {
+        }
+        Scn1:
+        for (;;) {
+            while (SDL_PollEvent(&e)) {
+                if (e.type == SDL_QUIT) {
+                    running = 0;
+                    goto ScnEnd;
+                }
+            }
+            ct = clock();
+            if (gravity(ct)) {
+                draw = 1;
+            }
+            if (getKey(VK_DOWN)) {
+                if (isCanMoveAt(0) && handlingclock[2] < ct) {
+                    gravityReset();
+                    handlingclock[2] = handling[2] + ct;
+                    if (handling[2] <= 0) {
+                        while (isCanMoveAt(0)) {
+                            draw = 1;
                             y--;
                         }
+                    } else {
+                        draw = 1;
+                        y--;
                     }
                 }
-                if (getKey(VK_LEFT)) {
-                    if (isCanMoveAt(1)) {
-                        if (handlingclock[0] < ct && dasactive[0] && handlingclock[3] < ct) {
-                            handlingclock[0] = ct + handling[0];
-                            if (handling[0] <= 0) {
-                                while (isCanMoveAt(1)) {
-                                    x -= 1;
-                                }
-                            } else {
+            }
+            if (getKey(VK_LEFT)) {
+                if (isCanMoveAt(1)) {
+                    if (handlingclock[0] < ct && dasactive[0] && handlingclock[3] < ct) {
+                        handlingclock[0] = ct + handling[0];
+                        if (handling[0] <= 0) {
+                            while (isCanMoveAt(1)) {
+                                draw = 1;
                                 x -= 1;
                             }
-                        } else if (!dasactive[0]) {
-                            dasactive[0] = 1;
+                        } else {
+                            draw = 1;
                             x -= 1;
                         }
+                    } else if (!dasactive[0]) {
+                        draw = 1;
+                        dasactive[0] = 1;
+                        x -= 1;
                     }
-                } else {
-                    dasactive[0] = 0;
-                    handlingclock[3] = ct + handling[1];
                 }
-                if (getKey(VK_RIGHT)) {
-                    if (isCanMoveAt(2)) {
-                        if (handlingclock[1] < ct && dasactive[1] && handlingclock[4] < ct) {
-                            handlingclock[1] = ct + handling[0];
-                            if (handling[1] <= 0) {
-                                while (isCanMoveAt(1)) {
-                                    x += 1;
-                                }
-                            } else {
+            } else {
+                dasactive[0] = 0;
+                handlingclock[3] = ct + handling[1];
+            }
+            if (getKey(VK_RIGHT)) {
+                if (isCanMoveAt(2)) {
+                    if (handlingclock[1] < ct && dasactive[1] && handlingclock[4] < ct) {
+                        handlingclock[1] = ct + handling[0];
+                        if (handling[1] <= 0) {
+                            while (isCanMoveAt(1)) {
+                                draw = 1;
                                 x += 1;
                             }
-                        } else if (!dasactive[1]) {
-                            dasactive[1] = 1;
+                        } else {
+                            draw = 1;
                             x += 1;
                         }
+                    } else if (!dasactive[1]) {
+                        draw = 1;
+                        dasactive[1] = 1;
+                        x += 1;
                     }
-                } else {
-                    dasactive[1] = 0;
-                    handlingclock[4] = ct + handling[1];
                 }
-                if (getKeyDown('Z')) {
-                    wallKickTest(hand, 0);
+            } else {
+                dasactive[1] = 0;
+                handlingclock[4] = ct + handling[1];
+            }
+            if (getKeyDown('Z')) {
+                if (wallKickTest(hand, 0)) {
+                    draw = 1;
                 }
-                if (getKeyDown('X') || getKeyDown(VK_UP)) {
-                    wallKickTest(hand, 1);
+            }
+            if (getKeyDown('X') || getKeyDown(VK_UP)) {
+                if (wallKickTest(hand, 1)) {
+                    draw = 1;
                 }
-                if (getKeyDown('A')) {
-                    wallKickTest(hand, 2);
+            }
+            if (getKeyDown('A')) {
+                if (wallKickTest(hand, 2)) {
+                    draw = 1;
                 }
-                if (getKeyDown('R')) {
-                    memset(field, 0, sizeof(field));
-                    bagrotate = 0;
-                    srand(time(NULL)+ct);
-                    bag[0] = generateRandomBag();
-                    bag[1] = generateRandomBag();
+            }
+            if (getKeyDown('R')) {
+                draw = 1;
+                memset(field, 0, sizeof(field));
+                bagrotate = 0;
+                srand(time(NULL)+ct);
+                bag[0] = generateRandomBag();
+                bag[1] = generateRandomBag();
+                hand = GET_BAG_ROTATED(bag, 0, bagrotate);
+                hold = -1;
+                x = 4;
+                y = 20;
+                currot = 0;
+                gravityReset();
+            }
+            if (getKeyDown(VK_SPACE)) {
+                draw = 1;
+                drop();
+            }
+            if (getKeyDown('C') && !isHolding) {
+                isHolding = 1;
+                draw = 1;
+                gravityReset();
+                if (hold == -1) {
+                    hold = hand;
+                    bagrotate++;
+                    if (bagrotate > 7) {
+                        bagrotate = 1;
+                        bag[0] = bag[1];
+                        bag[1] = generateRandomBag();
+                    }
                     hand = GET_BAG_ROTATED(bag, 0, bagrotate);
-                    hold = -1;
-                    x = 4;
-                    y = 20;
-                    currot = 0;
-                    gravityReset();
+                } else {
+                    int temp = hand;
+                    hand = hold;
+                    hold = temp;
                 }
-                if (getKeyDown(VK_SPACE)) {
-                    drop();
-                }
-                if (getKeyDown('C') && !isHolding) {
-                    isHolding = 1;
-                    gravityReset();
-                    if (hold == -1) {
-                        hold = hand;
-                        bagrotate++;
-                        if (bagrotate > 7) {
-                            bagrotate = 1;
-                            bag[0] = bag[1];
-                            bag[1] = generateRandomBag();
-                        }
-                        hand = GET_BAG_ROTATED(bag, 0, bagrotate);
-                    } else {
-                        int temp = hand;
-                        hand = hold;
-                        hold = temp;
-                    }
-                    x = 4;
-                    y = 20;
-                    currot = 0;
-                }
+                x = 4;
+                y = 20;
+                currot = 0;
+            }
+
+            if (draw) {
+                draw = 0;
+
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                SDL_RenderClear(renderer);
 
                 SDL_Rect rect;
                 SetDrawColor(renderer, cgGrid);
@@ -1034,20 +1090,22 @@ int main(int argc, char* argv[]) {
                 SET_DIR(ghostdata, currot);
                 SET_X(ghostdata, x+1);
                 SET_Y(ghostdata, chacky+1);
-                drawMino(renderer, ghostdata,1);
+                drawMino(renderer, ghostdata, 1);
 
                 int data = 0;
                 SET_COLOR(data, hand+1);
                 SET_DIR(data, currot);
                 SET_X(data, x+1);
                 SET_Y(data, y+1);
-                drawMino(renderer, data,0);
+                drawMino(renderer, data, 0);
+
+                renderFont(renderer, font7, "0.0.0 DEMO", 0, 135, &cWhite);
+                SDL_RenderPresent(renderer);
             }
+            SDL_Delay(1);
         }
-        renderFont(renderer, font7, "0.0.0 DEMO", 0, 135, &cWhite);
-        SDL_RenderPresent(renderer);
-        SDL_Delay(1);
-    }
+        
+    ScnEnd:
 
     //WaitForSingleObject(inputthread, INFINITE);
     //CloseHandle(inputthread);
