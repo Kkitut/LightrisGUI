@@ -208,7 +208,7 @@ const int TETROMINOS[6][4] = {
 static inline unsigned int getColor(unsigned int data) {
     return data & COLOR_MASK;
 }
-static inline unsigned int getDir(unsigned int data) {
+static inline unsigned int getRot(unsigned int data) {
     return (data >> DIR_SHIFT) & DIR_MASK;
 }
 static inline unsigned int getShape(unsigned int data) {
@@ -227,7 +227,7 @@ static inline unsigned int getY(unsigned int data) {
 static inline void setColor(unsigned int* data, unsigned int color) {
     *data = (*data & ~COLOR_MASK) | (color & COLOR_MASK);
 }
-static inline void setDir(unsigned int* data, unsigned int dir) {
+static inline void setRot(unsigned int* data, unsigned int dir) {
     *data = (*data & ~(DIR_MASK << DIR_SHIFT)) | ((dir & DIR_MASK) << DIR_SHIFT);
 }
 static inline void setShape(unsigned int* data, unsigned int shape) {
@@ -427,7 +427,7 @@ inline unsigned int getBag(unsigned int bag, int index) {
     return (bag >> (index * 3)) & 0x7;
 }
 unsigned int getBagRotated(const unsigned int* bag, int index, int rotate) {
-    return get_bag(bag[(index + rotate) / BAG_SIZE], (index + rotate) % BAG_SIZE);
+    return getBag(bag[(index + rotate) / BAG_SIZE], (index + rotate) % BAG_SIZE);
 }
 int bag[2] = {0, };
 int generateRandomBag() {
@@ -512,7 +512,7 @@ static void drop() {
     }
 
     int data = 0;
-    setColor(data, hand+1);
+    setColor(&data, hand+1);
 
     if (hand == 6) {
         for (int i = 0; i < 2; i++) {
@@ -1114,17 +1114,17 @@ int main(int argc, char* argv[]) {
                     chacky--;
                 }
                 int ghostdata = 0;
-                setColor(ghostdata, hand+1);
-                setRot(ghostdata, currot);
-                setX(ghostdata, x+1);
-                setY(ghostdata, chacky+1);
+                setColor(&ghostdata, hand+1);
+                setRot(&ghostdata, currot);
+                setX(&ghostdata, x+1);
+                setY(&ghostdata, chacky+1);
                 drawMino(renderer, ghostdata, 1);
 
                 int data = 0;
-                setColor(data, hand+1);
-                setRot(data, currot);
-                setX(data, x+1);
-                setY(data, y+1);
+                setColor(&data, hand+1);
+                setRot(&data, currot);
+                setX(&data, x+1);
+                setY(&data, y+1);
                 drawMino(renderer, data, 0);
 
                 renderFont(renderer, font7, "0.0.0 DEMO", 0, 135, &cWhite);
