@@ -205,19 +205,43 @@ const int TETROMINOS[6][4] = {
 #define X_SHIFT       12
 #define Y_SHIFT       22
 
-#define GET_COLOR(data)      ((data) & COLOR_MASK)
-#define GET_DIR(data)        (((data) >> DIR_SHIFT) & DIR_MASK)
-#define GET_SHAPE(data)      (((data) >> SHAPE_SHIFT) & SHAPE_MASK)
-#define GET_TYPE(data)       (((data) >> TYPE_SHIFT) & TYPE_MASK)
-#define GET_X(data)          (((data) >> X_SHIFT) & X_MASK)
-#define GET_Y(data)          (((data) >> Y_SHIFT) & Y_MASK)
+static inline unsigned int getColor(unsigned int data) {
+    return data & COLOR_MASK;
+}
+static inline unsigned int getDir(unsigned int data) {
+    return (data >> DIR_SHIFT) & DIR_MASK;
+}
+static inline unsigned int getShape(unsigned int data) {
+    return (data >> SHAPE_SHIFT) & SHAPE_MASK;
+}
+static inline unsigned int getType(unsigned int data) {
+    return (data >> TYPE_SHIFT) & TYPE_MASK;
+}
+static inline unsigned int getX(unsigned int data) {
+    return (data >> X_SHIFT) & X_MASK;
+}
+static inline unsigned int getY(unsigned int data) {
+    return (data >> Y_SHIFT) & Y_MASK;
+}
 
-#define SET_COLOR(data, color) ((data) = ((data) & ~COLOR_MASK) | ((color) & COLOR_MASK))
-#define SET_DIR(data, dir)     ((data) = ((data) & ~(DIR_MASK << DIR_SHIFT)) | (((dir) & DIR_MASK) << DIR_SHIFT))
-#define SET_SHAPE(data, shape) ((data) = ((data) & ~(SHAPE_MASK << SHAPE_SHIFT)) | (((shape) & SHAPE_MASK) << SHAPE_SHIFT))
-#define SET_TYPE(data, type)   ((data) = ((data) & ~(TYPE_MASK << TYPE_SHIFT)) | (((type) & TYPE_MASK) << TYPE_SHIFT))
-#define SET_X(data, x)         ((data) = ((data) & ~(X_MASK << X_SHIFT)) | (((x) & X_MASK) << X_SHIFT))
-#define SET_Y(data, y)         ((data) = ((data) & ~(Y_MASK << Y_SHIFT)) | (((y) & Y_MASK) << Y_SHIFT))
+static inline void setColor(unsigned int* data, unsigned int color) {
+    *data = (*data & ~COLOR_MASK) | (color & COLOR_MASK);
+}
+static inline void setDir(unsigned int* data, unsigned int dir) {
+    *data = (*data & ~(DIR_MASK << DIR_SHIFT)) | ((dir & DIR_MASK) << DIR_SHIFT);
+}
+static inline void setShape(unsigned int* data, unsigned int shape) {
+    *data = (*data & ~(SHAPE_MASK << SHAPE_SHIFT)) | ((shape & SHAPE_MASK) << SHAPE_SHIFT);
+}
+static inline void setType(unsigned int* data, unsigned int type) {
+    *data = (*data & ~(TYPE_MASK << TYPE_SHIFT)) | ((type & TYPE_MASK) << TYPE_SHIFT);
+}
+static inline void setX(unsigned int* data, unsigned int x) {
+    *data = (*data & ~(X_MASK << X_SHIFT)) | ((x & X_MASK) << X_SHIFT);
+}
+static inline void setY(unsigned int* data, unsigned int y) {
+    *data = (*data & ~(Y_MASK << Y_SHIFT)) | ((y & Y_MASK) << Y_SHIFT);
+}
 
 #define FIELD_SIZE_X 10
 #define FIELD_SIZE_Y 32
@@ -399,9 +423,12 @@ static _Bool wallKickTest(int mino, int rot) {
 }
 
 #define BAG_SIZE 7
-#define GET_BAG(bag, index) (((bag) >> ((index) * 3)) & 0x7)
-#define GET_BAG_ROTATED(bag, index, rotate) GET_BAG(bag[(index + rotate) / BAG_SIZE], (index + rotate) % BAG_SIZE)
-
+inline unsigned int getBag(unsigned int bag, int index) {
+    return (bag >> (index * 3)) & 0x7;
+}
+unsigned int getBagRotated(const unsigned int* bag, int index, int rotate) {
+    return get_bag(bag[(index + rotate) / BAG_SIZE], (index + rotate) % BAG_SIZE);
+}
 int bag[2] = {0, };
 int generateRandomBag() {
     int bagData = 0;
@@ -485,7 +512,7 @@ static void drop() {
     }
 
     int data = 0;
-    SET_COLOR(data, hand+1);
+    setColor(data, hand+1);
 
     if (hand == 6) {
         for (int i = 0; i < 2; i++) {
@@ -539,7 +566,7 @@ static void drop() {
         bag[1] = generateRandomBag();
     }
     isHolding = 0;
-    hand = GET_BAG_ROTATED(bag, 0, bagrotate);
+    hand = getBagRotated(bag, 0, bagrotate);
     x = 4;
     y = 20;
     currot = 0;
@@ -583,7 +610,7 @@ static int drawField(SDL_Renderer* renderer) {
             if (!field[i][j]) {
                 continue;
             }
-            SetDrawColor(renderer, ColorByMino(GET_COLOR(field[i][j])));
+            SetDrawColor(renderer, ColorByMino(getColor(field[i][j])));
             SDL_Rect rect = {97 + 6 * j, 126 - 6 * i, 6, 6};
             renderFillRect(renderer, rect);
         }
@@ -593,33 +620,33 @@ static int drawField(SDL_Renderer* renderer) {
 
 static int drawMino(SDL_Renderer* renderer, int data, _Bool ghost) {
     if (ghost) {
-        SDL_Color color = ColorByMino(GET_COLOR(data));
+        SDL_Color color = ColorByMino(getColor(data));
         color.r -= 60;
         color.g -= 60;
         color.b -= 60;
         SetDrawColor(renderer, color);
     } else {
-        SetDrawColor(renderer, ColorByMino(GET_COLOR(data)));
+        SetDrawColor(renderer, ColorByMino(getColor(data)));
     }
     int bitIndex = 0;
-    if (GET_COLOR(data) == 1) {
+    if (getColor(data) == 1) {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                if (TETROMINOS[0][GET_DIR(data)] & (1 << bitIndex)) {
-                    SDL_Rect rect = {97 + (GET_X(data) - 1) * 6 + j * 6 - 6, 126 - (GET_Y(data) - 1) * 6 + i * 6 - 6, 6, 6};
+                if (TETROMINOS[0][getRot(data)] & (1 << bitIndex)) {
+                    SDL_Rect rect = {97 + (getX(data) - 1) * 6 + j * 6 - 6, 126 - (getY(data) - 1) * 6 + i * 6 - 6, 6, 6};
                     renderFillRect(renderer, rect);
                 }
                 bitIndex++;
             }
         }
-    } else if (GET_COLOR(data) == 7) {
-        SDL_Rect rect = {97 + (GET_X(data) - 1) * 6, 126 - (GET_Y(data) - 1) * 6 - 6, 12, 12};
+    } else if (getColor(data) == 7) {
+        SDL_Rect rect = {97 + (getX(data) - 1) * 6, 126 - (getY(data) - 1) * 6 - 6, 12, 12};
         renderFillRect(renderer, rect);
     } else {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                if (TETROMINOS[GET_COLOR(data)-1][GET_DIR(data)] & (1 << bitIndex)) {
-                    SDL_Rect rect = {97 + (GET_X(data) - 1) * 6 + j * 6 - 6, 126 - (GET_Y(data) - 1) * 6 + i * 6 - 6, 6, 6};
+                if (TETROMINOS[getColor(data)-1][getRot(data)] & (1 << bitIndex)) {
+                    SDL_Rect rect = {97 + (getX(data) - 1) * 6 + j * 6 - 6, 126 - (getY(data) - 1) * 6 + i * 6 - 6, 6, 6};
                     renderFillRect(renderer, rect);
                 }
                 bitIndex++;
@@ -758,7 +785,7 @@ int main(int argc, char* argv[]) {
     srand(time(NULL)+clock());
     bag[0] = generateRandomBag();
     bag[1] = generateRandomBag();
-    hand = GET_BAG_ROTATED(bag, 0, bagrotate);
+    hand = getBagRotated(bag, 0, bagrotate);
 
     SDL_Event e;
 
@@ -966,7 +993,7 @@ int main(int argc, char* argv[]) {
                 srand(time(NULL)+ct);
                 bag[0] = generateRandomBag();
                 bag[1] = generateRandomBag();
-                hand = GET_BAG_ROTATED(bag, 0, bagrotate);
+                hand = getBagRotated(bag, 0, bagrotate);
                 hold = -1;
                 isHolding = 0;
                 x = 4;
@@ -990,7 +1017,7 @@ int main(int argc, char* argv[]) {
                         bag[0] = bag[1];
                         bag[1] = generateRandomBag();
                     }
-                    hand = GET_BAG_ROTATED(bag, 0, bagrotate);
+                    hand = getBagRotated(bag, 0, bagrotate);
                 } else {
                     int temp = hand;
                     hand = hold;
@@ -1063,11 +1090,11 @@ int main(int argc, char* argv[]) {
                     drawViewMino(renderer, hold+1, 72, 23, isHolding);
                 }
 
-                drawViewMino(renderer, GET_BAG_ROTATED(bag, 1, bagrotate)+1, 164, 23, 0);
-                drawViewMino(renderer, GET_BAG_ROTATED(bag, 2, bagrotate)+1, 164, 23 + 19 * 1, 0);
-                drawViewMino(renderer, GET_BAG_ROTATED(bag, 3, bagrotate)+1, 164, 23 + 19 * 2, 0);
-                drawViewMino(renderer, GET_BAG_ROTATED(bag, 4, bagrotate)+1, 164, 23 + 19 * 3, 0);
-                drawViewMino(renderer, GET_BAG_ROTATED(bag, 5, bagrotate)+1, 164, 23 + 19 * 4, 0);
+                drawViewMino(renderer, getBagRotated(bag, 1, bagrotate)+1, 164, 23, 0);
+                drawViewMino(renderer, getBagRotated(bag, 2, bagrotate)+1, 164, 23 + 19 * 1, 0);
+                drawViewMino(renderer, getBagRotated(bag, 3, bagrotate)+1, 164, 23 + 19 * 2, 0);
+                drawViewMino(renderer, getBagRotated(bag, 4, bagrotate)+1, 164, 23 + 19 * 3, 0);
+                drawViewMino(renderer, getBagRotated(bag, 5, bagrotate)+1, 164, 23 + 19 * 4, 0);
 
                 int chacky = y;
                 for (;;) {
@@ -1087,17 +1114,17 @@ int main(int argc, char* argv[]) {
                     chacky--;
                 }
                 int ghostdata = 0;
-                SET_COLOR(ghostdata, hand+1);
-                SET_DIR(ghostdata, currot);
-                SET_X(ghostdata, x+1);
-                SET_Y(ghostdata, chacky+1);
+                setColor(ghostdata, hand+1);
+                setRot(ghostdata, currot);
+                setX(ghostdata, x+1);
+                setY(ghostdata, chacky+1);
                 drawMino(renderer, ghostdata, 1);
 
                 int data = 0;
-                SET_COLOR(data, hand+1);
-                SET_DIR(data, currot);
-                SET_X(data, x+1);
-                SET_Y(data, y+1);
+                setColor(data, hand+1);
+                setRot(data, currot);
+                setX(data, x+1);
+                setY(data, y+1);
                 drawMino(renderer, data, 0);
 
                 renderFont(renderer, font7, "0.0.0 DEMO", 0, 135, &cWhite);
