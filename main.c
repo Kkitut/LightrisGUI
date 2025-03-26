@@ -31,9 +31,15 @@ _Bool isWindowFocused() {
 
 static _Bool previousKeyState[256] = { 0 };
 static _Bool getKey(int key) {
+    if (!isWindowFocused()) {
+        return 0;
+    }
     return (GetAsyncKeyState(key) & 0x8000) != 0;
 }
 static _Bool getKeyDown(int key) {
+    if (!isWindowFocused()) {
+        return 0;
+    }
     _Bool isDown = (GetAsyncKeyState(key) & 0x8000) != 0;
     _Bool wasDown = previousKeyState[key];
 
@@ -42,6 +48,9 @@ static _Bool getKeyDown(int key) {
     return (isDown && !wasDown);
 }
 static _Bool getKeyUp(int key) {
+    if (!isWindowFocused()) {
+        return 0;
+    }
     _Bool isDown = (GetAsyncKeyState(key) & 0x8000) != 0;
     _Bool wasDown = previousKeyState[key];
 
@@ -258,43 +267,53 @@ static const unsigned int wallkickJLSTZ180[9] = {
     0b000011110011011100001010
 };
 
-#define EXTRACT_WALLKICK(table, kickIndex) ((((table)[(kickIndex) / 10] >> (((kickIndex) * 3) % 30)) & 0x7) - 3)
-#define GET_FIELD_BITS(x, y) (((y) < 0 || (y) >= FIELD_SIZE_Y || (x) < 0 || (x) >= FIELD_SIZE_X || field[y][x]) ? 1 : 0)
+int extractWallkick(const int* table, int kickIndex) {
+    return (((table[kickIndex / 10] >> ((kickIndex * 3) % 30)) & 0x7) - 3);
+}
+int getFieldBits(int x, int y) {
+    return (y < 0 || y >= FIELD_SIZE_Y || x < 0 || x >= FIELD_SIZE_X || field[y][x]) ? 1 : 0;
+}
 
-#define GET_FIELD_BITS2(x, y) ( \
-    (GET_FIELD_BITS((x),   (y))   << 0)  | \
-    (GET_FIELD_BITS((x)+1, (y))   << 1)  | \
-    (GET_FIELD_BITS((x),   (y)+1) << 2)  | \
-    (GET_FIELD_BITS((x)+1, (y)+1) << 3)  )
+int getFieldBits2(int x, int y) {
+    return 
+        (getFieldBits(x, y)         << 0) |
+        (getFieldBits(x + 1, y)     << 1) |
+        (getFieldBits(x, y + 1)     << 2) |
+        (getFieldBits(x + 1, y + 1) << 3);
+}
 
-#define GET_FIELD_BITS3(x, y) ( \
-    (GET_FIELD_BITS((x)-1, (y)+1) << 0)  | \
-    (GET_FIELD_BITS((x),   (y)+1) << 1)  | \
-    (GET_FIELD_BITS((x)+1, (y)+1) << 2)  | \
-    (GET_FIELD_BITS((x)-1, (y))   << 3)  | \
-    (GET_FIELD_BITS((x),   (y))   << 4)  | \
-    (GET_FIELD_BITS((x)+1, (y))   << 5)  | \
-    (GET_FIELD_BITS((x)-1, (y)-1) << 6)  | \
-    (GET_FIELD_BITS((x),   (y)-1) << 7)  | \
-    (GET_FIELD_BITS((x)+1, (y)-1) << 8)  )
+int getFieldBits3(int x, int y) {
+    return 
+        (getFieldBits(x - 1, y + 1) << 0) |
+        (getFieldBits(x, y + 1)     << 1) |
+        (getFieldBits(x + 1, y + 1) << 2) |
+        (getFieldBits(x - 1, y)     << 3) |
+        (getFieldBits(x, y)         << 4) |
+        (getFieldBits(x + 1, y)     << 5) |
+        (getFieldBits(x - 1, y - 1) << 6) |
+        (getFieldBits(x, y - 1)     << 7) |
+        (getFieldBits(x + 1, y - 1) << 8);
+}
 
-#define GET_FIELD_BITS4(x, y) ( \
-    (GET_FIELD_BITS((x)-1, (y)+1) << 0)  | \
-    (GET_FIELD_BITS((x),   (y)+1) << 1)  | \
-    (GET_FIELD_BITS((x)+1, (y)+1) << 2)  | \
-    (GET_FIELD_BITS((x)+2, (y)+1) << 3)  | \
-    (GET_FIELD_BITS((x)-1, (y))   << 4)  | \
-    (GET_FIELD_BITS((x),   (y))   << 5)  | \
-    (GET_FIELD_BITS((x)+1, (y))   << 6)  | \
-    (GET_FIELD_BITS((x)+2, (y))   << 7)  | \
-    (GET_FIELD_BITS((x)-1, (y)-1) << 8)  | \
-    (GET_FIELD_BITS((x),   (y)-1) << 9)  | \
-    (GET_FIELD_BITS((x)+1, (y)-1) << 10) | \
-    (GET_FIELD_BITS((x)+2, (y)-1) << 11) | \
-    (GET_FIELD_BITS((x)-1, (y)-2) << 12) | \
-    (GET_FIELD_BITS((x),   (y)-2) << 13) | \
-    (GET_FIELD_BITS((x)+1, (y)-2) << 14) | \
-    (GET_FIELD_BITS((x)+2, (y)-2) << 15) )
+int getFieldBits4(int x, int y) {
+    return 
+        (getFieldBits(x - 1, y + 1) << 0)  |
+        (getFieldBits(x, y + 1)     << 1)  |
+        (getFieldBits(x + 1, y + 1) << 2)  |
+        (getFieldBits(x + 2, y + 1) << 3)  |
+        (getFieldBits(x - 1, y)     << 4)  |
+        (getFieldBits(x, y)         << 5)  |
+        (getFieldBits(x + 1, y)     << 6)  |
+        (getFieldBits(x + 2, y)     << 7)  |
+        (getFieldBits(x - 1, y - 1) << 8)  |
+        (getFieldBits(x, y - 1)     << 9)  |
+        (getFieldBits(x + 1, y - 1) << 10) |
+        (getFieldBits(x + 2, y - 1) << 11) |
+        (getFieldBits(x - 1, y - 2) << 12) |
+        (getFieldBits(x, y - 2)     << 13) |
+        (getFieldBits(x + 1, y - 2) << 14) |
+        (getFieldBits(x + 2, y - 2) << 15);
+}
 
 
 void wallKickTest(int mino, int rot) {
@@ -306,11 +325,11 @@ void wallKickTest(int mino, int rot) {
     
     if (mino) {
         if (rot == 2) {
-            if (GET_FIELD_BITS3(x, y) & TETROMINOS[mino][nextrot]) {
+            if (getFieldBits3(x, y) & TETROMINOS[mino][nextrot]) {
                 for (int i = 0; i < 11; i++) {
-                    int ty = EXTRACT_WALLKICK(wallkickJLSTZ180, nextrot * 22 + i * 2) + x;
-                    int tx = EXTRACT_WALLKICK(wallkickJLSTZ180, nextrot * 22 + i * 2 + 1) + y;
-                    if (!(GET_FIELD_BITS3(ty, tx) & TETROMINOS[mino][nextrot])) {
+                    int ty = extractWallkick(wallkickJLSTZ180, nextrot * 22 + i * 2) + x;
+                    int tx = extractWallkick(wallkickJLSTZ180, nextrot * 22 + i * 2 + 1) + y;
+                    if (!(getFieldBits3(ty, tx) & TETROMINOS[mino][nextrot])) {
                         currot = nextrot;
                         x = ty;
                         y = tx;
@@ -321,11 +340,11 @@ void wallKickTest(int mino, int rot) {
                 currot = nextrot;
             }
         } else {
-            if (GET_FIELD_BITS3(x, y) & TETROMINOS[mino][nextrot]) {
+            if (getFieldBits3(x, y) & TETROMINOS[mino][nextrot]) {
                 for (int i = 0; i < 4; i++) {
-                    int ty = EXTRACT_WALLKICK(wallkickJLSTZ, nextrot * 8 + i * 2 + (rot * 32)) + x;
-                    int tx = EXTRACT_WALLKICK(wallkickJLSTZ, nextrot * 8 + i * 2 + 1 + (rot * 32)) + y;
-                    if (!(GET_FIELD_BITS3(ty, tx) & TETROMINOS[mino][nextrot])) {
+                    int ty = extractWallkick(wallkickJLSTZ, nextrot * 8 + i * 2 + (rot * 32)) + x;
+                    int tx = extractWallkick(wallkickJLSTZ, nextrot * 8 + i * 2 + 1 + (rot * 32)) + y;
+                    if (!(getFieldBits3(ty, tx) & TETROMINOS[mino][nextrot])) {
                         currot = nextrot;
                         x = ty;
                         y = tx;
@@ -338,11 +357,11 @@ void wallKickTest(int mino, int rot) {
         }
     } else {
         if (rot == 2) {
-            if (GET_FIELD_BITS4(x, y) & TETROMINOS[mino][nextrot]) {
+            if (getFieldBits4(x, y) & TETROMINOS[mino][nextrot]) {
                 for (int i = 0; i < 5; i++) {
-                    int ty = EXTRACT_WALLKICK(wallkickI180, nextrot * 10 + i * 2) + x;
-                    int tx = EXTRACT_WALLKICK(wallkickI180, nextrot * 10 + i * 2 + 1) + y;
-                    if (!(GET_FIELD_BITS4(ty, tx) & TETROMINOS[mino][nextrot])) {
+                    int ty = extractWallkick(wallkickI180, nextrot * 10 + i * 2) + x;
+                    int tx = extractWallkick(wallkickI180, nextrot * 10 + i * 2 + 1) + y;
+                    if (!(getFieldBits4(ty, tx) & TETROMINOS[mino][nextrot])) {
                         currot = nextrot;
                         x = ty;
                         y = tx;
@@ -353,11 +372,11 @@ void wallKickTest(int mino, int rot) {
                 currot = nextrot;
             }
         } else {
-            if (GET_FIELD_BITS4(x, y) & TETROMINOS[mino][nextrot]) {
+            if (getFieldBits4(x, y) & TETROMINOS[mino][nextrot]) {
                 for (int i = 0; i < 4; i++) {
-                    int ty = EXTRACT_WALLKICK(wallkickI, nextrot * 8 + i * 2 + (rot * 32)) + x;
-                    int tx = EXTRACT_WALLKICK(wallkickI, nextrot * 8 + i * 2 + 1 + (rot * 32)) + y;
-                    if (!(GET_FIELD_BITS4(ty, tx) & TETROMINOS[mino][nextrot])) {
+                    int ty = extractWallkick(wallkickI, nextrot * 8 + i * 2 + (rot * 32)) + x;
+                    int tx = extractWallkick(wallkickI, nextrot * 8 + i * 2 + 1 + (rot * 32)) + y;
+                    if (!(getFieldBits4(ty, tx) & TETROMINOS[mino][nextrot])) {
                         if (rot) {
                             currot++;
                         } else {
@@ -427,15 +446,15 @@ static _Bool isCanMoveAt(int deg) {
             break;
     }
     if (hand == 6) {
-        if (!(GET_FIELD_BITS2(xp, yp) & 0b1111)) {
+        if (!(getFieldBits2(xp, yp) & 0b1111)) {
             return 1;
         }
     } else if (hand) {
-        if (!(GET_FIELD_BITS3(xp, yp) & TETROMINOS[hand][currot])) {
+        if (!(getFieldBits3(xp, yp) & TETROMINOS[hand][currot])) {
             return 1;
         }
     } else {
-        if (!(GET_FIELD_BITS4(xp, yp) & TETROMINOS[0][currot])) {
+        if (!(getFieldBits4(xp, yp) & TETROMINOS[0][currot])) {
             return 1;
         }
     }
@@ -446,15 +465,15 @@ static void drop() {
     int downy = y;
     for (;;) {
         if (hand == 6) {
-            if ((GET_FIELD_BITS2(x, downy-1) & 0b1111)) {
+            if ((getFieldBits2(x, downy-1) & 0b1111)) {
                 break;
             }
         } else if (hand) {
-            if ((GET_FIELD_BITS3(x, downy-1) & TETROMINOS[hand][currot])) {
+            if ((getFieldBits3(x, downy-1) & TETROMINOS[hand][currot])) {
                 break;
             }
         } else {
-            if ((GET_FIELD_BITS4(x, downy-1) & TETROMINOS[0][currot])) {
+            if ((getFieldBits4(x, downy-1) & TETROMINOS[0][currot])) {
                 break;
             }
         }
@@ -994,15 +1013,15 @@ int main(int argc, char* argv[]) {
                 int chacky = y;
                 for (;;) {
                     if (hand == 6) {
-                        if ((GET_FIELD_BITS2(x, chacky-1) & 0b1111)) {
+                        if ((getFieldBits2(x, chacky-1) & 0b1111)) {
                             break;
                         }
                     } else if (hand) {
-                        if ((GET_FIELD_BITS3(x, chacky-1) & TETROMINOS[hand][currot])) {
+                        if ((getFieldBits3(x, chacky-1) & TETROMINOS[hand][currot])) {
                             break;
                         }
                     } else {
-                        if ((GET_FIELD_BITS4(x, chacky-1) & TETROMINOS[0][currot])) {
+                        if ((getFieldBits4(x, chacky-1) & TETROMINOS[0][currot])) {
                             break;
                         }
                     }
