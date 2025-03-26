@@ -945,6 +945,8 @@ int main(int argc, char* argv[]) {
                         hand = hold;
                         hold = temp;
                     }
+                    x = 4;
+                    y = 20;
                     currot = 0;
                 }
 
