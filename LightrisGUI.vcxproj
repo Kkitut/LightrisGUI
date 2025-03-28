@@ -133,7 +133,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="bag.c" />
+    <ClCompile Include="field.c" />
+    <ClCompile Include="kick.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="minos.c" />
+    <ClCompile Include="kicktables.c" />
+    <ClCompile Include="player.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="bag.h" />
+    <ClInclude Include="field.h" />
+    <ClInclude Include="kick.h" />
+    <ClInclude Include="lightris.h" />
+    <ClInclude Include="minos.h" />
+    <ClInclude Include="kicktables.h" />
+    <ClInclude Include="player.h" />
+    <ClInclude Include="rusttype.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -18,5 +18,49 @@
     <ClCompile Include="main.c">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="field.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="kicktables.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="minos.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="player.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="kick.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="bag.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="kicktables.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="minos.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="lightris.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="field.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="player.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="kick.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="rusttype.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="bag.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
