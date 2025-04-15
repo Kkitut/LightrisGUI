@@ -31,4 +31,6 @@ inline void PlayerSetHand(unsigned int* status, unsigned int hand);
 inline void PlayerSetHold(unsigned int* status, unsigned int hold);
 inline void PlayerSetSpin(unsigned int* status, unsigned int spin);
 
+static _Bool PlayerIsCanMoveAt(Player* player, int deg);
+
 #endif

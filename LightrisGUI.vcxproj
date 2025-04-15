@@ -140,6 +140,7 @@
     <ClCompile Include="minos.c" />
     <ClCompile Include="kicktables.c" />
     <ClCompile Include="player.c" />
+    <ClCompile Include="render.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bag.h" />
@@ -150,6 +151,9 @@
     <ClInclude Include="kicktables.h" />
     <ClInclude Include="player.h" />
     <ClInclude Include="rusttype.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="render.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

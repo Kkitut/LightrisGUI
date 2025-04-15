@@ -12,74 +12,6 @@
 #define CANVAS_WIDTH 16*16 // 256
 #define CANVAS_HEIGHT 9*16 // 144
 
-int running = 1;
-
-typedef struct Camera {
-    int x, y;
-} Camera;
-Camera cam = {0, 0};
-
-static int renderFont(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x, int y, SDL_Color* color, _Bool alignRight) {
-    SDL_Surface* surface = TTF_RenderUTF8_Solid(font, text, *color);
-    if (!surface) {
-        return 1;
-    }
-
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-    if (!texture) {
-        SDL_FreeSurface(surface);
-        return 1;
-    }
-
-    SDL_SetTextureScaleMode(texture, SDL_ScaleModeNearest);
-
-    SDL_Rect rect = {(alignRight ? x - surface->w : x) - cam.x, y - cam.y, surface->w, surface->h};
-
-    if (SDL_RenderCopy(renderer, texture, NULL, &rect) != 0) {
-        SDL_DestroyTexture(texture);
-        SDL_FreeSurface(surface);
-        return 1;
-    }
-
-    SDL_DestroyTexture(texture);
-    SDL_FreeSurface(surface);
-    return 0;
-}
-
-static int renderRect(SDL_Renderer* renderer, SDL_Rect rect, int thickness) {
-    int x = rect.x - cam.x;
-    int y = rect.y - cam.y;
-
-    if (thickness > 0) {
-        for (int i = 0; i < thickness; ++i) {
-            SDL_Rect border = { x + i, y + i, rect.w - 2 * i, rect.h - 2 * i };
-            if (SDL_RenderDrawRect(renderer, &border) != 0) {
-                return 1;
-            }
-        }
-    }
-    else {
-        SDL_Rect newrect = { x, y, rect.w, rect.h };
-        if (SDL_RenderDrawRect(renderer, &newrect) != 0) {
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
-static int renderFillRect(SDL_Renderer* renderer, SDL_Rect rect) {
-    int x = rect.x - cam.x;
-    int y = rect.y - cam.y;
-
-    SDL_Rect newrect = {x, y, rect.w, rect.h};
-    if (SDL_RenderFillRect(renderer, &newrect) != 0) {
-        return 1;
-    }
-
-    return 0;
-}
-
 const SDL_Color cWhite = {255, 255, 255, 255};
 const SDL_Color cRed = {255, 150, 150, 255};
 const SDL_Color cYellow = {255, 255, 150, 255};
@@ -100,6 +32,73 @@ const SDL_Color cmB = {36, 36, 36, 255};
 
 #define SetDrawColor(renderer, color) SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a)
 
+SDL_Color ColorByMino(int colorIndex) {
+    switch (colorIndex) {
+        case 1: return cmI;
+        case 2: return cmJ;
+        case 3: return cmL;
+        case 4: return cmS;
+        case 5: return cmT;
+        case 6: return cmZ;
+        case 7: return cmO;
+        case 8: return cmG;
+        case 9: return cmB;
+        default: return cWhite;
+    }
+}
+
+static int drawViewMino(SDL_Renderer* renderer, Camera* cam, int mino, int x, int y, _Bool forcegray) {
+    if (forcegray) {
+        SetDrawColor(renderer, ColorByMino(8));
+    } else {
+        SetDrawColor(renderer, ColorByMino(mino));
+    }
+
+    SDL_Rect rect;
+    switch (mino) {
+        case 1:
+            rect = (SDL_Rect) {x-3, y+3, 24, 6};
+            renderFillRect(renderer, &rect, cam);
+            break;
+        case 2:
+            rect = (SDL_Rect) {x, y, 6, 6};
+            renderFillRect(renderer, &rect, cam);
+            rect = (SDL_Rect) {x, y+6, 18, 6};
+            renderFillRect(renderer, &rect, cam);
+            break;
+        case 3:
+            rect = (SDL_Rect) {x+12, y, 6, 6};
+            renderFillRect(renderer, &rect, cam);
+            rect = (SDL_Rect) {x, y+6, 18, 6};
+            renderFillRect(renderer, &rect, cam);
+            break;
+        case 4:
+            rect = (SDL_Rect) {x+6, y, 12, 6};
+            renderFillRect(renderer, &rect, cam);
+            rect = (SDL_Rect) {x, y+6, 12, 6};
+            renderFillRect(renderer, &rect, cam);
+            break;
+        case 5:
+            rect = (SDL_Rect) {x+6, y, 6, 6};
+            renderFillRect(renderer, &rect, cam);
+            rect = (SDL_Rect) {x, y+6, 18, 6};
+            renderFillRect(renderer, &rect, cam);
+            break;
+        case 6:
+            rect = (SDL_Rect) {x, y, 12, 6};
+            renderFillRect(renderer, &rect, cam);
+            rect = (SDL_Rect) {x+6, y+6, 12, 6};
+            renderFillRect(renderer, &rect, cam);
+            break;
+        case 7:
+            rect = (SDL_Rect) {x+3, y, 12, 12};
+            renderFillRect(renderer, &rect, cam);
+            break;
+    }
+
+    return 0;
+}
+
 
 //Handling ARR DAS SDF
 //int handling[3] = {30, 200, 30};
@@ -109,49 +108,6 @@ _Bool dasactive[2] = {0, 0};
 
 int forcedrop = 900;
 int forcedropTimer = 0;
-
-static const char* lineNames[] = {
-    "Noway", "Single", "Double", "Triple", "Quad",
-    "Penta", "Hexa", "Hepta", "Octa", "Nona", "Deca",
-    "Hendeca", "Dodeca", "Trideca", "Tetradeca", "Pentadeca",
-    "Hexadeca", "Heptadeca", "Octadeca", "Enneadeca", "Icosa"
-};
-static const char* getLineChar(int line) {
-    if (line > 0 && line < (int)(sizeof(lineNames) / sizeof(lineNames[0]))) {
-        return lineNames[line];
-    }
-    return lineNames[0];
-}
-
-static _Bool isCanMoveAt(int deg) {
-    int xp = x;
-    int yp = y;
-    switch (deg) {
-        case 0:
-            yp--;
-            break;
-        case 1:
-            xp--;
-            break;
-        case 2:
-            xp++;
-            break;
-    }
-    if (hand == 6) {
-        if (!(FieldGetBits2(xp, yp) & 0b1111)) {
-            return 1;
-        }
-    } else if (hand) {
-        if (!(FieldGetBits3(xp, yp) & TETROMINOS[hand][currot])) {
-            return 1;
-        }
-    } else {
-        if (!(FieldGetBits4(xp, yp) & TETROMINOS[0][currot])) {
-            return 1;
-        }
-    }
-    return 0;
-}
 
 static void gravityReset() {
     forcedropTimer = clock() + forcedrop;
@@ -258,21 +214,6 @@ static _Bool gravity(int clock) {
     return 0;
 }
 
-SDL_Color ColorByMino(int colorIndex) {
-    switch (colorIndex) {
-        case 1: return cmI;
-        case 2: return cmJ;
-        case 3: return cmL;
-        case 4: return cmS;
-        case 5: return cmT;
-        case 6: return cmZ;
-        case 7: return cmO;
-        case 8: return cmG;
-        case 9: return cmB;
-        default: return cWhite;
-    }
-}
-
 static int drawField(SDL_Renderer* renderer) {
     for (int i = 0; i < FIELD_SIZE_Y; i++) {
         for (int j = 0; j < FIELD_SIZE_X; j++) {
@@ -322,58 +263,6 @@ static int drawMino(SDL_Renderer* renderer, int data, _Bool ghost) {
             }
         }
     }
-    return 0;
-}
-
-static int drawViewMino(SDL_Renderer* renderer, int mino, int x, int y, _Bool forcegray) {
-    if (forcegray) {
-        SetDrawColor(renderer, ColorByMino(8));
-    } else {
-        SetDrawColor(renderer, ColorByMino(mino));
-    }
-    
-    SDL_Rect rect;
-    switch (mino) {
-        case 1: 
-            rect = (SDL_Rect) {x-3, y+3, 24, 6};
-            renderFillRect(renderer, rect);
-            break;
-        case 2:
-            rect = (SDL_Rect) {x, y, 6, 6};
-            renderFillRect(renderer, rect);
-            rect = (SDL_Rect) {x, y+6, 18, 6};
-            renderFillRect(renderer, rect);
-            break;
-        case 3:
-            rect = (SDL_Rect) {x+12, y, 6, 6};
-            renderFillRect(renderer, rect);
-            rect = (SDL_Rect) {x, y+6, 18, 6};
-            renderFillRect(renderer, rect);
-            break;
-        case 4:
-            rect = (SDL_Rect) {x+6, y, 12, 6};
-            renderFillRect(renderer, rect);
-            rect = (SDL_Rect) {x, y+6, 12, 6};
-            renderFillRect(renderer, rect);
-            break;
-        case 5:
-            rect = (SDL_Rect) {x+6, y, 6, 6};
-            renderFillRect(renderer, rect);
-            rect = (SDL_Rect) {x, y+6, 18, 6};
-            renderFillRect(renderer, rect);
-            break;
-        case 6:
-            rect = (SDL_Rect) {x, y, 12, 6};
-            renderFillRect(renderer, rect);
-            rect = (SDL_Rect) {x+6, y+6, 12, 6};
-            renderFillRect(renderer, rect);
-            break;
-        case 7:
-            rect = (SDL_Rect) {x+3, y, 12, 12};
-            renderFillRect(renderer, rect);
-            break;
-    }
-
     return 0;
 }
 
@@ -432,14 +321,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    //InitializeCriticalSection(&inputcs);
-    //HANDLE inputthread = CreateThread(0, 0, handleKeyboardInput, 0, 0, 0);
-    //if (!inputthread) {
-    //    return 1;
-    //}
-
-    //º¯¼ö
-
     _Bool nab = 0;
     int menusel = 0;
     _Bool issetting = 0;
@@ -447,8 +328,6 @@ int main(int argc, char* argv[]) {
     register _Bool draw = 1;
 
     resetPos();
-
-    //³¡
 
     srand(time(NULL)+clock());
     bag[0] = generateRandomBag();
@@ -459,14 +338,10 @@ int main(int argc, char* argv[]) {
 
     clock_t ct = clock();
 
-        //EnterCriticalSection(&inputcs);
-        //focus = isWindowFocused();
-        //LeaveCriticalSection(&inputcs);        
 Scn0:
     for (;;) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
-                running = 0;
                 goto ScnEnd;
             }
         }
@@ -503,7 +378,7 @@ Scn0:
                         nab = 1;
                         break;
                     case 3:
-                        running = 0;
+                        goto ScnEnd;
                         break;
                     default:
                         nab = 0;
@@ -554,7 +429,6 @@ Scn1:
     for (;;) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
-                running = 0;
                 goto ScnEnd;
             }
         }
@@ -815,8 +689,6 @@ Scn1:
     }
 
 ScnEnd:
-    //WaitForSingleObject(inputthread, INFINITE);
-    //CloseHandle(inputthread);
 
     TTF_CloseFont(font7);
     TTF_CloseFont(font9);
