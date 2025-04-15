@@ -10,15 +10,10 @@
 #define CANVAS_WIDTH 16*16 // 256
 #define CANVAS_HEIGHT 9*16 // 144
 
-const double PI = M_PI;
-
-CRITICAL_SECTION inputcs;
 int x = 0, y = 0;
 int currot = 0;
 
 _Bool focus = 0;
-
-int running = 1;
 
 typedef struct Camera {
     int x, y;
@@ -57,17 +52,6 @@ static _Bool getKeyUp(int key) {
     previousKeyState[key] = isDown;
 
     return (!isDown && wasDown);
-}
-
-DWORD WINAPI handleKeyboardInput(LPVOID lpParam) {
-    while (running) {
-        EnterCriticalSection(&inputcs);
-        if (focus) {
-            
-        }
-        LeaveCriticalSection(&inputcs);
-    }
-    return 0;
 }
 
 static int renderFont(SDL_Renderer* renderer, TTF_Font* font, const char* text, int x, int y, SDL_Color* color) {
@@ -815,7 +799,6 @@ int main(int argc, char* argv[]) {
         for (;;) {
             while (SDL_PollEvent(&e)) {
                 if (e.type == SDL_QUIT) {
-                    running = 0;
                     goto ScnEnd;
                 }
             }
@@ -852,8 +835,7 @@ int main(int argc, char* argv[]) {
                             nab = 1;
                             break;
                         case 3:
-                            running = 0;
-                            break;
+                            goto ScnEnd;
                         default:
                             nab = 0;
                             break;
@@ -902,7 +884,6 @@ int main(int argc, char* argv[]) {
         for (;;) {
             while (SDL_PollEvent(&e)) {
                 if (e.type == SDL_QUIT) {
-                    running = 0;
                     goto ScnEnd;
                 }
             }
@@ -1134,9 +1115,6 @@ int main(int argc, char* argv[]) {
         }
         
     ScnEnd:
-
-    //WaitForSingleObject(inputthread, INFINITE);
-    //CloseHandle(inputthread);
 
     TTF_CloseFont(font7);
     TTF_CloseFont(font9);
